@@ -1,0 +1,54 @@
+{
+  "name": "md-kanban",
+  "displayName": "MD Kanban",
+  "description": "Manage project tasks and todos in a Kanban board view, stored as Markdown files",
+  "version": "0.1.0",
+  "publisher": "jeddak",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jebakumarj/md-kanban"
+  },
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "keywords": [
+    "kanban",
+    "markdown",
+    "tasks",
+    "todo",
+    "project management",
+    "board"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "md-kanban.openBoard",
+        "title": "Open Kanban Board",
+        "category": "Kanban"
+      },
+      {
+        "command": "md-kanban.createBoard",
+        "title": "Create New Kanban Board",
+        "category": "Kanban"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "@types/vscode": "^1.109.0",
+    "typescript": "^5.9.3"
+  }
+}
