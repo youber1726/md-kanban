@@ -114,9 +114,10 @@
     toolbar.appendChild(h1);
 
     const actions = el('div', 'toolbar-actions');
-    const kanbanToTasksBtn = el('button', 'secondary');
-    kanbanToTasksBtn.textContent = '从kanban更新任务单';
+    const kanbanToTasksBtn = el('button', 'secondary toolbar-command');
     kanbanToTasksBtn.title = 'Run pm.py kanban2status for daily_brief';
+    kanbanToTasksBtn.appendChild(toolbarIcon('↻', 'toolbar-command-icon icon-update'));
+    kanbanToTasksBtn.appendChild(document.createTextNode('从kanban更新任务单'));
     kanbanToTasksBtn.onclick = () => vscode.postMessage({
       type: 'runDailyBriefPmCommand',
       command: 'kanban2status',
@@ -124,9 +125,10 @@
     });
     actions.appendChild(kanbanToTasksBtn);
 
-    const tasksToKanbanBtn = el('button', 'secondary');
-    tasksToKanbanBtn.textContent = '从任务单重建kanban';
+    const tasksToKanbanBtn = el('button', 'secondary toolbar-command');
     tasksToKanbanBtn.title = 'Run pm.py status2kanban for daily_brief';
+    tasksToKanbanBtn.appendChild(toolbarIcon('↓', 'toolbar-command-icon icon-down'));
+    tasksToKanbanBtn.appendChild(document.createTextNode('从任务单重建kanban'));
     tasksToKanbanBtn.onclick = () => vscode.postMessage({
       type: 'runDailyBriefPmCommand',
       command: 'status2kanban',
@@ -1854,6 +1856,13 @@
     const e = document.createElement(tag);
     if (className) e.className = className;
     return e;
+  }
+
+  function toolbarIcon(text, className) {
+    const icon = el('span', className);
+    icon.textContent = text;
+    icon.setAttribute('aria-hidden', 'true');
+    return icon;
   }
 
   function labelEl(text) {

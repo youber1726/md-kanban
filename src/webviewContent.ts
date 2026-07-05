@@ -81,6 +81,26 @@ export function getWebviewContent(
       justify-content: flex-end;
     }
 
+    .toolbar-command {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toolbar-command-icon {
+      font-size: 14px;
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    .toolbar-command-icon.icon-update {
+      color: #3fb950;
+    }
+
+    .toolbar-command-icon.icon-down {
+      color: #f85149;
+    }
+
     .filter-bar {
       display: flex;
       align-items: center;
