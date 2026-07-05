@@ -1,12 +1,20 @@
 import * as vscode from 'vscode';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { archiveTaskFromBoard } from './archive';
 import { parseMarkdown, serializeToMarkdown, KanbanBoard, generateId } from './kanbanParser';
 import { openTaskSource } from './source';
 import { getWebviewContent } from './webviewContent';
 
+const execFileAsync = promisify(execFile);
+const DAILY_BRIEF_PROJECT_ROOT = '/Users/youber/share-workspace/01-projects/260614-daily_brief';
+const PM_SCAFFOLD_SCRIPT = '/Users/youber/.claude/skills/pm-scaffold/scripts/pm.py';
+const DAILY_BRIEF_PM_COMMANDS = new Set(['kanban2status', 'status2kanban']);
+
 export class KanbanPanel {
   public static readonly viewType = 'mdKanban.boardView';
   private static panels: Map<string, KanbanPanel> = new Map();
+  private static outputChannel: vscode.OutputChannel | undefined;
 
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
@@ -326,6 +334,11 @@ export class KanbanPanel {
         break;
       }
 
+      case 'runDailyBriefPmCommand': {
+        await this._runDailyBriefPmCommand(message.command, message.label);
+        break;
+      }
+
       case 'openSource': {
         await openTaskSource(message.source, this._fileUri);
         break;
@@ -413,6 +426,80 @@ export class KanbanPanel {
       type: 'boardUpdate',
       board: this._board,
     });
+  }
+
+  private async _runDailyBriefPmCommand(command: unknown, label: unknown) {
+    if (typeof command !== 'string' || !DAILY_BRIEF_PM_COMMANDS.has(command)) {
+      vscode.window.showErrorMessage('Unknown MD Kanban project command.');
+      return;
+    }
+
+    const commandLabel = typeof label === 'string' && label.trim() ? label.trim() : command;
+    const output = KanbanPanel.getOutputChannel();
+    output.appendLine(`[${new Date().toISOString()}] ${commandLabel}`);
+    output.appendLine(`cwd: ${DAILY_BRIEF_PROJECT_ROOT}`);
+    output.appendLine(`python3 ${PM_SCAFFOLD_SCRIPT} ${command}`);
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: commandLabel,
+        cancellable: false,
+      },
+      async () => {
+        try {
+          const { stdout, stderr } = await execFileAsync(
+            'python3',
+            [PM_SCAFFOLD_SCRIPT, command],
+            {
+              cwd: DAILY_BRIEF_PROJECT_ROOT,
+              encoding: 'utf8',
+              timeout: 120000,
+              maxBuffer: 1024 * 1024,
+            }
+          );
+          this._appendCommandOutput(output, stdout, stderr);
+          vscode.window.showInformationMessage(`${commandLabel}完成。`);
+        } catch (error) {
+          const message = this._formatCommandError(error);
+          output.appendLine(message);
+          vscode.window.showErrorMessage(`${commandLabel}失败：${message}`);
+        }
+      }
+    );
+  }
+
+  private _appendCommandOutput(output: vscode.OutputChannel, stdout: string | Buffer, stderr: string | Buffer) {
+    const stdoutText = stdout.toString().trim();
+    const stderrText = stderr.toString().trim();
+    if (stdoutText) {
+      output.appendLine(stdoutText);
+    }
+    if (stderrText) {
+      output.appendLine(stderrText);
+    }
+  }
+
+  private _formatCommandError(error: unknown): string {
+    if (error instanceof Error) {
+      const details: string[] = [error.message];
+      const maybeOutput = error as Error & { stdout?: string | Buffer; stderr?: string | Buffer };
+      if (maybeOutput.stdout?.toString().trim()) {
+        details.push(maybeOutput.stdout.toString().trim());
+      }
+      if (maybeOutput.stderr?.toString().trim()) {
+        details.push(maybeOutput.stderr.toString().trim());
+      }
+      return details.join('\n');
+    }
+    return String(error);
+  }
+
+  private static getOutputChannel(): vscode.OutputChannel {
+    if (!KanbanPanel.outputChannel) {
+      KanbanPanel.outputChannel = vscode.window.createOutputChannel('MD Kanban');
+    }
+    return KanbanPanel.outputChannel;
   }
 
   public openTaskInView(taskId: string) {

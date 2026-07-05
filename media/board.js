@@ -114,6 +114,26 @@
     toolbar.appendChild(h1);
 
     const actions = el('div', 'toolbar-actions');
+    const kanbanToTasksBtn = el('button', 'secondary');
+    kanbanToTasksBtn.textContent = '从kanban更新任务单';
+    kanbanToTasksBtn.title = 'Run pm.py kanban2status for daily_brief';
+    kanbanToTasksBtn.onclick = () => vscode.postMessage({
+      type: 'runDailyBriefPmCommand',
+      command: 'kanban2status',
+      label: '从kanban更新任务单',
+    });
+    actions.appendChild(kanbanToTasksBtn);
+
+    const tasksToKanbanBtn = el('button', 'secondary');
+    tasksToKanbanBtn.textContent = '从任务单重建kanban';
+    tasksToKanbanBtn.title = 'Run pm.py status2kanban for daily_brief';
+    tasksToKanbanBtn.onclick = () => vscode.postMessage({
+      type: 'runDailyBriefPmCommand',
+      command: 'status2kanban',
+      label: '从任务单重建kanban',
+    });
+    actions.appendChild(tasksToKanbanBtn);
+
     const mdBtn = el('button', 'secondary');
     mdBtn.textContent = '📄 View Markdown';
     mdBtn.onclick = () => vscode.postMessage({ type: 'openMarkdown' });

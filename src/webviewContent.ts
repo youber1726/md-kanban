@@ -77,6 +77,8 @@ export function getWebviewContent(
       display: flex;
       gap: 8px;
       margin-left: auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .filter-bar {
@@ -243,6 +245,7 @@ export function getWebviewContent(
       cursor: pointer;
       font-size: 12px;
       font-family: inherit;
+      white-space: nowrap;
     }
 
     button:hover { background: var(--accent-hover); }
