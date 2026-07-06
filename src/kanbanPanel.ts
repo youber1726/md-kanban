@@ -1,5 +1,8 @@
 import * as vscode from 'vscode';
 import { execFile } from 'child_process';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { promisify } from 'util';
 import { archiveTaskFromBoard } from './archive';
 import { parseMarkdown, serializeToMarkdown, KanbanBoard, generateId } from './kanbanParser';
@@ -7,9 +10,8 @@ import { openTaskSource } from './source';
 import { getWebviewContent } from './webviewContent';
 
 const execFileAsync = promisify(execFile);
-const DAILY_BRIEF_PROJECT_ROOT = '/Users/youber/share-workspace/01-projects/260614-daily_brief';
-const PM_SCAFFOLD_SCRIPT = '/Users/youber/.claude/skills/pm-scaffold/scripts/pm.py';
-const DAILY_BRIEF_PM_COMMANDS = new Set(['kanban2status', 'status2kanban']);
+const PM_SCAFFOLD_SCRIPT = path.join(os.homedir(), '.claude', 'skills', 'pm-scaffold', 'scripts', 'pm.py');
+const PM_SCAFFOLD_COMMANDS = new Set(['kanban2status', 'status2kanban', 'archive-done']);
 
 export class KanbanPanel {
   public static readonly viewType = 'mdKanban.boardView';
@@ -334,8 +336,8 @@ export class KanbanPanel {
         break;
       }
 
-      case 'runDailyBriefPmCommand': {
-        await this._runDailyBriefPmCommand(message.command, message.label);
+      case 'runPmScaffoldCommand': {
+        await this._runPmScaffoldCommand(message.command, message.label, message.confirmation);
         break;
       }
 
@@ -428,16 +430,26 @@ export class KanbanPanel {
     });
   }
 
-  private async _runDailyBriefPmCommand(command: unknown, label: unknown) {
-    if (typeof command !== 'string' || !DAILY_BRIEF_PM_COMMANDS.has(command)) {
+  private async _runPmScaffoldCommand(command: unknown, label: unknown, confirmation: unknown) {
+    if (typeof command !== 'string' || !PM_SCAFFOLD_COMMANDS.has(command)) {
       vscode.window.showErrorMessage('Unknown MD Kanban project command.');
       return;
     }
 
     const commandLabel = typeof label === 'string' && label.trim() ? label.trim() : command;
+    if (!(await this._confirmPmScaffoldCommand(confirmation))) {
+      return;
+    }
+
+    const projectRoot = this._findPmScaffoldRoot();
+    if (!projectRoot) {
+      vscode.window.showErrorMessage('Could not find a pm-scaffold project root. Open a kanban.md inside a project with docs/2-tasks/.');
+      return;
+    }
+
     const output = KanbanPanel.getOutputChannel();
     output.appendLine(`[${new Date().toISOString()}] ${commandLabel}`);
-    output.appendLine(`cwd: ${DAILY_BRIEF_PROJECT_ROOT}`);
+    output.appendLine(`cwd: ${projectRoot}`);
     output.appendLine(`python3 ${PM_SCAFFOLD_SCRIPT} ${command}`);
 
     await vscode.window.withProgress(
@@ -452,13 +464,15 @@ export class KanbanPanel {
             'python3',
             [PM_SCAFFOLD_SCRIPT, command],
             {
-              cwd: DAILY_BRIEF_PROJECT_ROOT,
+              cwd: projectRoot,
               encoding: 'utf8',
               timeout: 120000,
               maxBuffer: 1024 * 1024,
             }
           );
           this._appendCommandOutput(output, stdout, stderr);
+          await vscode.commands.executeCommand('md-kanban.refreshBoards').then(undefined, () => undefined);
+          await this._loadAndRefresh();
           vscode.window.showInformationMessage(`${commandLabel}完成。`);
         } catch (error) {
           const message = this._formatCommandError(error);
@@ -467,6 +481,39 @@ export class KanbanPanel {
         }
       }
     );
+  }
+
+  private async _confirmPmScaffoldCommand(confirmation: unknown): Promise<boolean> {
+    if (!confirmation || typeof confirmation !== 'object') {
+      return true;
+    }
+    const data = confirmation as { message?: unknown; confirmLabel?: unknown };
+    const message = typeof data.message === 'string' ? data.message : '';
+    const confirmLabel = typeof data.confirmLabel === 'string' ? data.confirmLabel : '确认';
+    if (!message) {
+      return true;
+    }
+    const choice = await vscode.window.showWarningMessage(
+      message,
+      { modal: true },
+      confirmLabel
+    );
+    return choice === confirmLabel;
+  }
+
+  private _findPmScaffoldRoot(): string | undefined {
+    let dir = path.dirname(this._fileUri.fsPath);
+    while (true) {
+      const tasksDir = path.join(dir, 'docs', '2-tasks');
+      if (fs.existsSync(tasksDir) && fs.statSync(tasksDir).isDirectory()) {
+        return dir;
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) {
+        return undefined;
+      }
+      dir = parent;
+    }
   }
 
   private _appendCommandOutput(output: vscode.OutputChannel, stdout: string | Buffer, stderr: string | Buffer) {

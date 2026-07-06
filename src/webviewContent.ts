@@ -101,6 +101,10 @@ export function getWebviewContent(
       color: #f85149;
     }
 
+    .toolbar-command-icon.icon-archive {
+      color: #d29922;
+    }
+
     .filter-bar {
       display: flex;
       align-items: center;

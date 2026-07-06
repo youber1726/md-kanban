@@ -115,26 +115,45 @@
 
     const actions = el('div', 'toolbar-actions');
     const kanbanToTasksBtn = el('button', 'secondary toolbar-command');
-    kanbanToTasksBtn.title = 'Run pm.py kanban2status for daily_brief';
+    kanbanToTasksBtn.title = 'Run pm.py kanban2status for this project';
     kanbanToTasksBtn.appendChild(toolbarIcon('↻', 'toolbar-command-icon icon-update'));
     kanbanToTasksBtn.appendChild(document.createTextNode('从kanban更新任务单'));
     kanbanToTasksBtn.onclick = () => vscode.postMessage({
-      type: 'runDailyBriefPmCommand',
+      type: 'runPmScaffoldCommand',
       command: 'kanban2status',
       label: '从kanban更新任务单',
     });
     actions.appendChild(kanbanToTasksBtn);
 
     const tasksToKanbanBtn = el('button', 'secondary toolbar-command');
-    tasksToKanbanBtn.title = 'Run pm.py status2kanban for daily_brief';
+    tasksToKanbanBtn.title = 'Run pm.py status2kanban for this project';
     tasksToKanbanBtn.appendChild(toolbarIcon('↓', 'toolbar-command-icon icon-down'));
     tasksToKanbanBtn.appendChild(document.createTextNode('从任务单重建kanban'));
     tasksToKanbanBtn.onclick = () => vscode.postMessage({
-      type: 'runDailyBriefPmCommand',
+      type: 'runPmScaffoldCommand',
       command: 'status2kanban',
       label: '从任务单重建kanban',
+      confirmation: {
+        message: '重建kanban会覆盖当前看板状态，请确认。',
+        confirmLabel: '确认重建',
+      },
     });
     actions.appendChild(tasksToKanbanBtn);
+
+    const archiveDoneBtn = el('button', 'secondary toolbar-command');
+    archiveDoneBtn.title = 'Run pm.py archive-done for this project';
+    archiveDoneBtn.appendChild(toolbarIcon('⇥', 'toolbar-command-icon icon-archive'));
+    archiveDoneBtn.appendChild(document.createTextNode('归档已完成任务单'));
+    archiveDoneBtn.onclick = () => vscode.postMessage({
+      type: 'runPmScaffoldCommand',
+      command: 'archive-done',
+      label: '归档已完成任务单',
+      confirmation: {
+        message: '归档功能会批量移动任务单位置，请确认。',
+        confirmLabel: '确认归档',
+      },
+    });
+    actions.appendChild(archiveDoneBtn);
 
     const mdBtn = el('button', 'secondary');
     mdBtn.textContent = '📄 View Markdown';
